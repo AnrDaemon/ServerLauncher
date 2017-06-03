@@ -1,0 +1,47 @@
+INSTALLATION
+
+A. Prerequisites.
+
+1. Standard POSIX 2008.1 compliant shell.
+2. Java 7 or 8. Symlink into /usr/bin/java is recommended.
+3. GNU tar (preferred) or other tar flavor.
+4. Some kind of compression filter. GZip is sufficient, xz is recommended.
+    Keep in mind that the better the compression ratio, the more time and
+    resources it will take.
+5. GNU screen (strongly recommended).
+
+B. Fast portable install.
+
+1. Unpack archive.
+2. Move all files from `archive/bin' directory to the root directory of your
+    server. Preserve executable bits!
+3. Copy `config/launcher.properties.sample' to `server/launcher.properties'
+    and adjust its values.
+4. Copy `config/jvm.properties.sample' to `server/jvm.properties' and adjust
+    its values.
+5. Start server: "server/mcsc.sh start".
+
+C. Separate install.
+
+1. Place the scripts wherever you can reach them.
+2. Set `$MCSC_DIR' environment variable to specify server root directory.
+3. Copy `*.sample' files to the server root directory, remove the `.sample'
+    suffix and adjust them as you see fit.
+4. Start server: "mcsc.sh start".
+
+D. Multiserver install.
+
+Goes much like Separate install in the previous example, except you create a
+separate user+profile for each server, and script will look in the user's
+`$HOME' directory for launcher and daemon configuration.
+
+1. Place the scripts wherever you can reach them.
+2. Create a system user+profile for each server instance.
+3. Copy .sample files to the server root (user home) directory, remove the
+    ".sample" suffix and adjust them as you see fit.
+4. Start server: "mcsc.sh start" from the user account.
+
+Make sure the `$HOME' variable is set before you launch the instance (this is
+for system init scripts).
+
+Text revision $Id: INSTALLATION.txt 68 2016-04-01 20:23:25Z anrdaemon $

@@ -1,0 +1,37 @@
+##############################################################################
+#
+# @package Minecraft server controller
+# @module  A `sample` command.
+# @version SVN: $Id: sample.mcsc 243 2017-06-03 15:03:50Z anrdaemon $
+#
+#HELP#########################################################################
+#
+#   sample [ parameters ]
+#       A sample command to demonstrate the system in action.
+#       Prints the passed parameters as seen.
+#.
+##############################################################################
+#
+# This program is free software.
+# It comes without any warranty, to the extent permitted by applicable law.
+# You can redistribute it and/or modify it under the terms of the
+#
+#        Do What The Fuck You Want To Public License, Version 2,
+#
+# as published by Sam Hocevar.
+# See http://www.wtfpl.net/ for more details.
+#
+##############################################################################
+
+## Die if called unconditionally.
+test "$_mcr" || exit 255
+
+printf 'Command parameters(%d):%s\n' $# "$(printf " '%s'" "$@")"
+
+if mc_remote -v; then
+  echo The server is running.
+elif mc_safe; then
+  echo The server environment is safe.
+else
+  echo "The '$(cat "$_lock")' command is running."
+fi

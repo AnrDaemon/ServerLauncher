@@ -1,0 +1,37 @@
+##############################################################################
+#
+# @package Minecraft server controller
+# @module  Server `stop` command.
+# @version $Id: stop.mcsc 243 2017-06-03 15:03:50Z anrdaemon $
+#
+#HELP#########################################################################
+#
+#   stop
+#       The `stop` command. Stops (attempts to...) server.
+#       In case of the server running in screen session, it sends a "/stop"
+#       command with a short notice. In case of the server running in bare
+#       console, this is not possible.
+#.
+##############################################################################
+#
+# This program is free software.
+# It comes without any warranty, to the extent permitted by applicable law.
+# You can redistribute it and/or modify it under the terms of the
+#
+#        Do What The Fuck You Want To Public License, Version 2,
+#
+# as published by Sam Hocevar.
+# See http://www.wtfpl.net/ for more details.
+#
+##############################################################################
+
+## Die if called unconditionally.
+test "$_mcr" || exit 255
+
+mc_remote -v
+
+mc_call cmd /say Server shutdown requested.
+sleep 5
+mc_call cmd /say Server going down now.
+sleep 2
+mc_call cmd /stop

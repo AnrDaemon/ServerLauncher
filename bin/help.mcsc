@@ -1,0 +1,62 @@
+##############################################################################
+#
+# @package Minecraft server controller
+# @module  Server `help` command.
+# @version SVN: $Id: help.mcsc 243 2017-06-03 15:03:50Z anrdaemon $
+#
+##############################################################################
+#
+# This program is free software.
+# It comes without any warranty, to the extent permitted by applicable law.
+# You can redistribute it and/or modify it under the terms of the
+#
+#        Do What The Fuck You Want To Public License, Version 2,
+#
+# as published by Sam Hocevar.
+# See http://www.wtfpl.net/ for more details.
+#
+##############################################################################
+
+mc_version 2> /dev/null || {
+  "$(dirname "$(readlink -fe "$0")")/mcsc.sh" "$@"
+  exit $?
+}
+echo "
+Usage:
+
+    $(basename "$0") [ options ] <command> [ parameters ]
+
+Common options:
+
+  -h,--help
+      Print this help.
+
+  -V,--version
+      Print version information.
+
+  -t,--test
+      (unimplemented)
+
+  -v,--verbose
+      Be verbose. And I mean that.
+      In case of --help, print help for all modules.
+      WARNING: This may be A LOT of information.
+"
+
+if is_verbose; then
+( # Modules help
+  cd "$_dp0"
+  echo "Commands help:"
+  for mod in *.mcsc; do
+    unset _h
+    [ -f "$_dp0/$mod" ] \
+      && while read -r line; do
+        msg="${line#\#}"
+        [ "$msg" = "$line" ] && break
+        [ "$msg" = "." ] && [ "$_h" ] && break
+        [ "${msg%${msg#HELP}}" = "HELP" ] && _h=print && continue
+        [ "$_h" ] && echo "${msg# }"
+      done < "$_dp0/$mod"
+  done
+)
+fi

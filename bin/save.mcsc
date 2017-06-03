@@ -1,0 +1,111 @@
+##############################################################################
+#
+# @package Minecraft server controller
+# @module  A `save` command.
+# @version SVN: $Id: save.mcsc 243 2017-06-03 15:03:50Z anrdaemon $
+#
+#HELP#########################################################################
+#
+#   save [ logs | config | world | server ]
+#       Backup the indicated set of files.
+#
+#         logs   - all files matching `*.log` in the server root directory and
+#             in the `server/logs` directory.
+#
+#         config - server and launcher configuration files.
+#             Currently: config ForgeEssentials scripts *.properties.
+#
+#         world  - Only the `world' directory.
+#             FIXME: Currently this directory name is HARDCODED.
+#
+#         server - Everything minus logs.
+#             In detail, this means:
+#             1. World directory.
+#             2. Mods directory.
+#             3. Libraries directory.
+#             4. Any jar's found in the server root directory.
+#             5. config (see above)
+#
+#       Default is "server".
+#
+#       Note: If the set is `logs`, the log files will be deleted after backup.
+#
+#       ERR2 if `server/backup` directory do not exists.
+#           FIXME: Currently this directory name is HARDCODED.
+#
+#       NB: for those unable to read ABNF: Only one set name can be specified.
+#.
+##############################################################################
+#
+# This program is free software.
+# It comes without any warranty, to the extent permitted by applicable law.
+# You can redistribute it and/or modify it under the terms of the
+#
+#        Do What The Fuck You Want To Public License, Version 2,
+#
+# as published by Sam Hocevar.
+# See http://www.wtfpl.net/ for more details.
+#
+##############################################################################
+
+## Die if called unconditionally.
+test "$_mcr" || exit 255
+
+mc_safe
+
+mc_check_srcdir()
+{
+  [ -d "$1" ] || {
+    mc_verbose "${2:-'$1'} directory can't be found."
+    return 2
+  }
+}
+
+_SET_NAME="$1"
+unset _SET_OBJECTS
+case "$1" in
+  config)
+    for dir in config ForgeEssentials scripts; do
+      mc_check_srcdir "$_mcr/$dir" || continue
+      _SET_OBJECTS="${_SET_OBJECTS+$_SET_OBJECTS }$dir"
+    done
+
+    _SET_OBJECTS="${_SET_OBJECTS+$_SET_OBJECTS }*.json *.properties"
+    ;;
+  logs)
+    mc_check_srcdir "$_mcr/logs" Logs || exit 0
+
+    find . -iname logs -prune -o -type f -iname "*.log" -execdir mv ${MC_VERBOSE+-v} -bt "$_mcr/logs" '{}' +
+    ls -A logs/*.log > /dev/null 2>&1 || exit 0
+    _SET_OBJECTS="logs/*.log"
+    ;;
+  world)
+    mc_check_srcdir "$_mcr/world" World || exit 0
+
+    _SET_OBJECTS="world"
+    ;;
+  *)
+    _SET_NAME=server
+    for dir in config ForgeEssentials libraries mods scripts world; do
+      mc_check_srcdir "$_mcr/$dir" || continue
+      _SET_OBJECTS="${_SET_OBJECTS+$_SET_OBJECTS }$dir"
+    done
+
+    _SET_OBJECTS="${_SET_OBJECTS+$_SET_OBJECTS }*.jar *.json *.properties"
+    ;;
+esac
+
+[ -d "$_mcr/backup" ] && [ -w "$_mcr/backup" ] || {
+  mc_verbose "Backup directory can't be found."
+  return 2
+} >&2
+
+_SET_NAME="${_SET_NAME}-$(date +%Y%m%d-%H%M)"
+ls -1d $_SET_OBJECTS 2> /dev/null \
+| tar caf "$_mcr/backup/${_SET_NAME}.tar$TAR_SUFFIX" \
+  --transform="s#^(\./)?(logs/?)?#${_SET_NAME}/#x" \
+  --exclude-ignore=.backup-ignore \
+  --files-from=- \
+  && if [ "${_SET_NAME%%-*}" = "logs" ]; then
+    find logs -type f -iname "*.log" -delete
+  fi

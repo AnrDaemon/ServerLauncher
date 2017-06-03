@@ -1,0 +1,98 @@
+##############################################################################
+#
+# @package Minecraft server controller
+# @module  Server `start` command.
+# @version SVN: $Id: start.mcsc 243 2017-06-03 15:03:50Z anrdaemon $
+#
+#HELP#########################################################################
+#
+#   start [ server parameters ]
+#       The `start` command. Starts server. At least, tries to.
+#       Any additional specified parameters will be passed to the server.
+#
+#       Notifies if a server is running already.
+#
+#       Note: The 'save logs' command will be called before the server starts.
+#.
+##############################################################################
+#
+# This program is free software.
+# It comes without any warranty, to the extent permitted by applicable law.
+# You can redistribute it and/or modify it under the terms of the
+#
+#        Do What The Fuck You Want To Public License, Version 2,
+#
+# as published by Sam Hocevar.
+# See http://www.wtfpl.net/ for more details.
+#
+##############################################################################
+
+## Die if called unconditionally.
+test "$_mcr" || exit 255
+
+mc_remote && {
+  printf '%s\n' "Server is running already." \
+    "Use 'attach' command to attach the console or other commands to control it."
+  exit 0
+} || true
+
+mc_safe
+
+unset _mc_dummy
+eval set -- $(getopt -o '+' --longoptions 'dummy' --shell sh -- "$@")
+for i; do
+  case $i in
+    --dummy)
+      _mc_dummy=dummy
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+  esac
+done
+
+while read -r def; do
+  if [ "${def%%#*}" ]; then
+    VMPROPS="${VMPROPS}${VMPROPS:+ }${def%%#*}";
+  fi
+done < "$_mcr/jvm.properties" || true
+
+mc_call save logs || {
+  _err=$?
+  if [ $_err != 2 ]; then
+    exit $_err
+  fi
+}
+
+if [ "$SESSION" ]; then
+  {
+    grep -vE "^[[:space:]]*(deflog|logfile|shelltitle)\>" "$HOME/.screenrc"
+    printf '%s\n' '' "# MC Launcher tweaks" \
+      "logfile \"$_mcr/logs/console-%n.log\"" \
+      "logfile flush 1" \
+      "deflog off" \
+      "shelltitle \"\\$ |(shell):\""
+  } > "$_mcr/screen.conf" || true
+
+  unset _mc_drop_shell
+  screen -S "$SESSION" -Q title > /dev/null || {
+    screen -c "$_mcr/screen.conf" -mdaS "$SESSION"
+    _mc_drop_shell=drop0
+    sleep 1
+  }
+
+  if [ "$_mc_dummy" ]; then
+    screen -S "$SESSION" -X screen -t "$_mc_window:|$_mc_window:" -L -- "$_dp0/wrapper.sh"
+  else
+    screen -S "$SESSION" -X screen -t "$_mc_window:|$_mc_window:" -L -- "$JAVA" $VMPROPS -jar "$DAEMON" -- "$@" $OPTIONS
+  fi
+
+  if [ "$_mc_drop_shell" ] && screen -S "$SESSION" -p 0 -Q title > /dev/null; then
+    _shell="$(screen -S "$SESSION" -p 0 -Q title)"
+    [ "${_shell%${_shell#(shell):}}" = "(shell):" ] && screen -S "$SESSION" -p 0 -X kill
+  fi
+else
+  "$JAVA" $VMPROPS -jar "$DAEMON" -- "$@" $OPTIONS 2>&1 | tee "$_mcr/logs/console.log"
+fi
